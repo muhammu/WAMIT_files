@@ -50,7 +50,7 @@ def hemisphere(r, n_hoop, n_merid, symm, wet_side, org=None):
 
     INPUT:
     - r: radius of the hemisphere [m]
-    - n_hoop: number of panel in hoop direction [-]
+    - n_hoop: number of panel in hoop direction (consider only quarterth) [-]
     - n_merid: number of panel in meriodional direction [-]
     - org: 1-D numpy array of the origo of the hemisphere (i.e., [xo, yo, zo])
     - symm: symmetry of the body.
@@ -79,7 +79,7 @@ def hemisphere(r, n_hoop, n_merid, symm, wet_side, org=None):
     if symm == 1:
         phi = np.linspace(np.pi / 2, 0, n_hoop + 1)
     else:
-        phi = np.linspace(2 * np.pi, 0, n_hoop + 1)
+        phi = np.linspace(2 * np.pi, 0, (4 * n_hoop) + 1)
 
     # Scatter vertices (x[i,j], y[i,j], z[i,j]) around the discretized
     # hemisphere surface. i = no. of vertices in hoop direction,
@@ -149,7 +149,7 @@ def hollow_cylinder(r_in, r_out, h, n_hoop, n_r, n_h, symm, wet_side, org=None):
     - r_out: outer radius [m]
     - n_r: number of panel along the radius [m]
     - phi: hoop angle [rad]
-    - n_phi: number of panel around the hoop angle [-]
+    - n_phi: number of panel around the hoop angle (consider only quarterth) [-]
     - h: height of the cylinder
     - n_h: number of panel along the height [-]
     - symm: symmetry of the body.
@@ -160,7 +160,7 @@ def hollow_cylinder(r_in, r_out, h, n_hoop, n_r, n_h, symm, wet_side, org=None):
             1 = water is inside the body
 
     OUTPUT:
-    hemi_panel = i x j matrix
+    hollowcyl_panel = i x j matrix
     where:
      i = panel number,
      j = vertex number for each panel (always 12)
@@ -176,7 +176,7 @@ def hollow_cylinder(r_in, r_out, h, n_hoop, n_r, n_h, symm, wet_side, org=None):
     if symm == 1:
         phi = np.linspace(np.pi / 2, 0, n_hoop + 1)
     else:
-        phi = np.linspace(2 * np.pi, 0, n_hoop + 1)
+        phi = np.linspace(2 * np.pi, 0, (4 * n_hoop) + 1)
 
     # cylinder base
     r_dir = np.linspace(r_in, r_out, n_r + 1)
@@ -270,3 +270,97 @@ def hollow_cylinder(r_in, r_out, h, n_hoop, n_r, n_h, symm, wet_side, org=None):
                                              v_3_x, v_3_y, v_3_z,
                                              v_4_x, v_4_y, v_4_z]))
     return hollowcyl_panel
+
+
+def rectangular(B, H, n_B, n_H, symm, wet_side, org=None):
+    """
+    SHORT DESCRIPTION:
+    Generate low-order mesh of a rectangle. Imagine a coordinate systems
+    with x pointing towards you, y to your right, and z upwards.
+
+    INPUT:
+    - B: breadth of the rectangle [m]
+    - H: height of the rectangle [m]
+    - n_B: number of panel along the breadth (halfth) [m]
+    - n_H: number of panel along the height [rad]
+    - symm: symmetry of the body.
+            0 = no symmetry,
+            1 = symmetry (1/2th of the body)
+    - wet_side:
+            0 = you see the rectangle from the water,
+            1 = you see the rectangle from the dry part.
+
+    OUTPUT:
+    rectg_panel = i x j matrix
+    where:
+     i = panel number,
+     j = vertex number for each panel (always 12)
+
+    Muhammad Mukhlas, Norwegian University of Science and Technology, 2021
+    """
+    if org is None:   # if not declared, set [0., 0., 0.] as default
+        org = np.array([0., 0., 0.])
+    assert wet_side == 0 or wet_side == 1, "please set wet_side = 0 or 1"
+    assert symm == 0 or symm == 1, "please set symm = 0 or 1"
+
+    if symm == 1:
+        B_dir = np.linspace(0, B/2, n_B + 1) + org[1]
+        H_dir = - np.linspace(0, H, n_H + 1) + org[2]
+    elif symm == 0:
+        B_dir = np.linspace(0, B, (2 * n_B) + 1) + org[1]
+        H_dir = - np.linspace(0, H, n_H + 1) + org[2]
+
+    y_rect, z_rect = np.meshgrid(B_dir, H_dir)
+    x_rect = np.zeros_like(y_rect)
+
+    # Make blank array for each vertex
+    v_1_x = np.zeros(0)
+    v_1_y = np.zeros(0)
+    v_1_z = np.zeros(0)
+    #
+    v_2_x = np.zeros(0)
+    v_2_y = np.zeros(0)
+    v_2_z = np.zeros(0)
+    #
+    v_3_x = np.zeros(0)
+    v_3_y = np.zeros(0)
+    v_3_z = np.zeros(0)
+    #
+    v_4_x = np.zeros(0)
+    v_4_y = np.zeros(0)
+    v_4_z = np.zeros(0)
+    #
+    # For-loop to define vertex 1-4 for each panel as per WAMIT .gdf convention
+    for j in range(0, n_H):
+        v_1_x = np.append(v_1_x, x_rect[j, :n_B])
+        v_1_y = np.append(v_1_y, y_rect[j, :n_B])
+        v_1_z = np.append(v_1_z, z_rect[j, :n_B])
+        #
+        v_3_x = np.append(v_3_x, x_rect[j + 1, 1:n_B + 1])
+        v_3_y = np.append(v_3_y, y_rect[j + 1, 1:n_B + 1])
+        v_3_z = np.append(v_3_z, z_rect[j + 1, 1:n_B + 1])
+        #
+        # WAMIT has convention to determine which side is wet and vice versa
+        if wet_side == 0:
+            v_2_x = np.append(v_2_x, x_rect[j + 1, :n_B])
+            v_2_y = np.append(v_2_y, y_rect[j + 1, :n_B])
+            v_2_z = np.append(v_2_z, z_rect[j + 1, :n_B])
+            #
+            v_4_x = np.append(v_4_x, x_rect[j, 1:n_B + 1])
+            v_4_y = np.append(v_4_y, y_rect[j, 1:n_B + 1])
+            v_4_z = np.append(v_4_z, z_rect[j, 1:n_B + 1])
+        elif wet_side == 1:
+            v_2_x = np.append(v_2_x, x_rect[j, 1:n_B + 1])
+            v_2_y = np.append(v_2_y, y_rect[j, 1:n_B + 1])
+            v_2_z = np.append(v_2_z, z_rect[j, 1:n_B + 1])
+            #
+            v_4_x = np.append(v_4_x, x_rect[j + 1, :n_B])
+            v_4_y = np.append(v_4_y, y_rect[j + 1, :n_B])
+            v_4_z = np.append(v_4_z, z_rect[j + 1, :n_B])
+        #
+    # Array (total panel x 12 coord for vertex 1-4) which it should be okay to use for WAMIT
+    rectg_panel = np.transpose(np.array([v_1_x, v_1_y, v_1_z,
+                                         v_2_x, v_2_y, v_2_z,
+                                         v_3_x, v_3_y, v_3_z,
+                                         v_4_x, v_4_y, v_4_z]))
+    return rectg_panel
