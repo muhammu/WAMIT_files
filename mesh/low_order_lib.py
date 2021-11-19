@@ -6,10 +6,11 @@ class LO_mesh(object):
         """
         WAMIT low-order mesh class.
         """
-        self.geometric_dimension = None
         self.origo = None
         self.type = None
+        self.symmetry = None
         self.wetside = None
+        self.panelmat = None
 
 
 def to_rosetta_format(panel_mat):
@@ -77,6 +78,19 @@ def hemisphere(r, n_hoop, n_merid, symm, wet_side, org=None):
     assert n_hoop > 2, "please enter n_hoop > 2"
     assert n_merid > 2, "please enter n_merid > 2"
 
+    # Set the body mesh as an instance
+    mesh = LO_mesh()
+    mesh.origo = org
+    mesh.type = 'hemisphere'
+    if wet_side == 0:
+        mesh.wetside = 'exterior'
+    else:
+        mesh.wetside = 'interior'
+    if symm == 0:
+        mesh.symmetry = 'none'
+    else:
+        mesh.symmetry = 'ISX_local + ISY_local'
+
     # Define meridional (theta) and hoop (phi) angles, in radians
     theta = np.linspace(np.pi / 2, np.pi, n_merid + 1)
     if symm == 1:
@@ -135,11 +149,11 @@ def hemisphere(r, n_hoop, n_merid, symm, wet_side, org=None):
             v_4_y = np.append(v_4_y, y_hemi[1:n_hoop + 1, j])
             v_4_z = np.append(v_4_z, z_hemi[1:n_hoop + 1, j])
 
-    hemi_panel = np.transpose(np.array([v_1_x, v_1_y, v_1_z,
-                                        v_2_x, v_2_y, v_2_z,
-                                        v_3_x, v_3_y, v_3_z,
-                                        v_4_x, v_4_y, v_4_z]))
-    return hemi_panel
+    mesh.panelmat = np.transpose(np.array([v_1_x, v_1_y, v_1_z,
+                                           v_2_x, v_2_y, v_2_z,
+                                           v_3_x, v_3_y, v_3_z,
+                                           v_4_x, v_4_y, v_4_z]))
+    return mesh
 
 
 def hollow_cylinder(r_in, r_out, h, n_hoop, n_r, n_h, symm, wet_side, org=None):
@@ -183,6 +197,19 @@ def hollow_cylinder(r_in, r_out, h, n_hoop, n_r, n_h, symm, wet_side, org=None):
         phi = np.linspace(np.pi / 2, 0, n_hoop + 1)
     else:
         phi = np.linspace(2 * np.pi, 0, (4 * n_hoop) + 1)
+
+    # Set the body mesh as an instance
+    mesh = LO_mesh()
+    mesh.origo = org
+    mesh.type = 'hollow cylinder'
+    if wet_side == 0:
+        mesh.wetside = 'exterior'
+    else:
+        mesh.wetside = 'interior'
+    if symm == 0:
+        mesh.symmetry = 'none'
+    else:
+        mesh.symmetry = 'ISX_local + ISY_local'
 
     # cylinder base
     r_dir = np.linspace(r_in, r_out, n_r + 1)
@@ -271,11 +298,11 @@ def hollow_cylinder(r_in, r_out, h, n_hoop, n_r, n_h, symm, wet_side, org=None):
             v_4_z = np.append(v_2_z, z_wall[j + 1, :n_hoop])
 
     # Array (total panel x 12 coord for vertex 1-4) which it should be okay to use for WAMIT
-    hollowcyl_panel = np.transpose(np.array([v_1_x, v_1_y, v_1_z,
-                                             v_2_x, v_2_y, v_2_z,
-                                             v_3_x, v_3_y, v_3_z,
-                                             v_4_x, v_4_y, v_4_z]))
-    return hollowcyl_panel
+    mesh.panelmat = np.transpose(np.array([v_1_x, v_1_y, v_1_z,
+                                           v_2_x, v_2_y, v_2_z,
+                                           v_3_x, v_3_y, v_3_z,
+                                           v_4_x, v_4_y, v_4_z]))
+    return mesh
 
 
 def rectangular(B, H, n_B, n_H, symm, wet_side, org=None):
@@ -304,6 +331,7 @@ def rectangular(B, H, n_B, n_H, symm, wet_side, org=None):
 
     Muhammad Mukhlas, Norwegian University of Science and Technology, 2021
     """
+
     if org is None:   # if not declared, set [0., 0., 0.] as default
         org = np.array([0., 0., 0.])
     assert wet_side == 0 or wet_side == 1, "please set wet_side = 0 or 1"
@@ -315,6 +343,19 @@ def rectangular(B, H, n_B, n_H, symm, wet_side, org=None):
     elif symm == 0:
         B_dir = np.linspace(-B/2, B/2, (2 * n_B) + 1) + org[1]
         H_dir = - np.linspace(0, H, n_H + 1) + org[2]
+
+    # Set the body mesh as an instance
+    mesh = LO_mesh()
+    mesh.origo = org
+    mesh.type = 'rectangle'
+    if wet_side == 0:
+        mesh.wetside = 'front'
+    else:
+        mesh.wetside = 'back'
+    if symm == 0:
+        mesh.symmetry = 'none'
+    else:
+        mesh.symmetry = 'ISY_local'
 
     y_rect, z_rect = np.meshgrid(B_dir, H_dir)
     x_rect = np.zeros_like(y_rect)
@@ -365,8 +406,8 @@ def rectangular(B, H, n_B, n_H, symm, wet_side, org=None):
             v_4_z = np.append(v_4_z, z_rect[j, 1:n_B + 1])
         #
     # Array (total panel x 12 coord for vertex 1-4) which it should be okay to use for WAMIT
-    rectg_panel = np.transpose(np.array([v_1_x, v_1_y, v_1_z,
-                                         v_2_x, v_2_y, v_2_z,
-                                         v_3_x, v_3_y, v_3_z,
-                                         v_4_x, v_4_y, v_4_z]))
-    return rectg_panel
+    mesh.panelmat = np.transpose(np.array([v_1_x, v_1_y, v_1_z,
+                                           v_2_x, v_2_y, v_2_z,
+                                           v_3_x, v_3_y, v_3_z,
+                                           v_4_x, v_4_y, v_4_z]))
+    return mesh
