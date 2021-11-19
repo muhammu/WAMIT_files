@@ -73,6 +73,9 @@ def hemisphere(r, n_hoop, n_merid, symm, wet_side, org=None):
         org = np.array([0., 0., 0.])
     assert wet_side == 0 or wet_side == 1, "please set wet_side = 0 or 1"
     assert symm == 0 or symm == 1, "please set symm = 0 or 1"
+    assert r > 0, "please enter r > 0"
+    assert n_hoop > 2, "please enter n_hoop > 2"
+    assert n_merid > 2, "please enter n_merid > 2"
 
     # Define meridional (theta) and hoop (phi) angles, in radians
     theta = np.linspace(np.pi / 2, np.pi, n_merid + 1)
@@ -171,6 +174,9 @@ def hollow_cylinder(r_in, r_out, h, n_hoop, n_r, n_h, symm, wet_side, org=None):
         org = np.array([0., 0., 0.])
     assert wet_side == 0 or wet_side == 1, "please set wet_side = 0 or 1"
     assert symm == 0 or symm == 1, "please set symm = 0 or 1"
+    assert r_in < r_out, "please enter r_in < r_out"
+    assert n_hoop > 2, "please enter n_hoop > 2"
+    assert n_h > 2, "please enter nh > 2"
 
     # Define hoop (phi) angles, in radians
     if symm == 1:
@@ -307,7 +313,7 @@ def rectangular(B, H, n_B, n_H, symm, wet_side, org=None):
         B_dir = np.linspace(0, B/2, n_B + 1) + org[1]
         H_dir = - np.linspace(0, H, n_H + 1) + org[2]
     elif symm == 0:
-        B_dir = np.linspace(0, B, (2 * n_B) + 1) + org[1]
+        B_dir = np.linspace(-B/2, B/2, (2 * n_B) + 1) + org[1]
         H_dir = - np.linspace(0, H, n_H + 1) + org[2]
 
     y_rect, z_rect = np.meshgrid(B_dir, H_dir)
@@ -342,14 +348,6 @@ def rectangular(B, H, n_B, n_H, symm, wet_side, org=None):
         #
         # WAMIT has convention to determine which side is wet and vice versa
         if wet_side == 0:
-            v_2_x = np.append(v_2_x, x_rect[j + 1, :n_B])
-            v_2_y = np.append(v_2_y, y_rect[j + 1, :n_B])
-            v_2_z = np.append(v_2_z, z_rect[j + 1, :n_B])
-            #
-            v_4_x = np.append(v_4_x, x_rect[j, 1:n_B + 1])
-            v_4_y = np.append(v_4_y, y_rect[j, 1:n_B + 1])
-            v_4_z = np.append(v_4_z, z_rect[j, 1:n_B + 1])
-        elif wet_side == 1:
             v_2_x = np.append(v_2_x, x_rect[j, 1:n_B + 1])
             v_2_y = np.append(v_2_y, y_rect[j, 1:n_B + 1])
             v_2_z = np.append(v_2_z, z_rect[j, 1:n_B + 1])
@@ -357,6 +355,14 @@ def rectangular(B, H, n_B, n_H, symm, wet_side, org=None):
             v_4_x = np.append(v_4_x, x_rect[j + 1, :n_B])
             v_4_y = np.append(v_4_y, y_rect[j + 1, :n_B])
             v_4_z = np.append(v_4_z, z_rect[j + 1, :n_B])
+        elif wet_side == 1:
+            v_2_x = np.append(v_2_x, x_rect[j + 1, :n_B])
+            v_2_y = np.append(v_2_y, y_rect[j + 1, :n_B])
+            v_2_z = np.append(v_2_z, z_rect[j + 1, :n_B])
+            #
+            v_4_x = np.append(v_4_x, x_rect[j, 1:n_B + 1])
+            v_4_y = np.append(v_4_y, y_rect[j, 1:n_B + 1])
+            v_4_z = np.append(v_4_z, z_rect[j, 1:n_B + 1])
         #
     # Array (total panel x 12 coord for vertex 1-4) which it should be okay to use for WAMIT
     rectg_panel = np.transpose(np.array([v_1_x, v_1_y, v_1_z,
